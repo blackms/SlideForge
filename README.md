@@ -11,6 +11,7 @@ SlideForge is a multi-agent AI system that automatically generates professional 
 ## ✨ Features
 
 - 📄 **Multi-format Support**: Process PDF, DOCX, and TXT files
+- 📏 **Large Document Support**: Efficiently handles documents of 100+ pages with intelligent chunking
 - 🧠 **AI-Powered Content Extraction**: Intelligently extract and synthesize key information
 - 📊 **Smart Slide Generation**: Create well-structured slides with proper hierarchy
 - 🎨 **Automatic Styling**: Apply context-appropriate visual designs
@@ -51,8 +52,9 @@ SlideForge uses a modular, multi-agent architecture:
 
 1. **🔍 Extraction & Synthesis Agent**
    - Processes uploaded documents using PyPDF for PDF and python-docx for DOCX files
+   - Handles large documents (100+ pages) using intelligent chunking and strategic extraction
    - Extracts text, structure, and metadata
-   - Analyzes content using OpenAI GPT-4o-mini and Anthropic Claude 3 Sonnet via LangChain
+   - Analyzes content using OpenAI o3-mini and Anthropic Claude 3.7 Sonnet via LangChain
    - Generates summaries, extracts keywords, and structures content
    - Creates a presentation-ready data structure
 
@@ -73,7 +75,7 @@ SlideForge uses a modular, multi-agent architecture:
 - **Backend**: FastAPI
 - **Database**: SQLAlchemy with SQLite/PostgreSQL
 - **Authentication**: JWT
-- **AI/ML**: LangChain with OpenAI GPT-4o-mini and Anthropic Claude 3 Sonnet
+- **AI/ML**: LangChain with OpenAI o3-mini and Anthropic Claude 3.7 Sonnet
 - **Document Processing**: PyPDF, python-docx
 - **Presentation Generation**: python-pptx
 - **Task Processing**: Async processing
@@ -213,17 +215,33 @@ curl -X GET "http://localhost:8000/api/presentations/1/download" \
 
 SlideForge uses state-of-the-art LLMs from OpenAI and Anthropic to process documents:
 
-- **Text Summarization**: Uses Anthropic Claude 3 Sonnet with step-by-step thinking for comprehensive document summarization. The system prompt instructs Claude to think through its reasoning process in detail before providing a summary.
+- **Text Summarization**: Uses Anthropic Claude 3.7 Sonnet with step-by-step thinking for comprehensive document summarization. The system prompt instructs Claude to think through its reasoning process in detail before providing a summary.
 
-- **Keyword Extraction**: Uses OpenAI GPT-4o-mini for efficient and accurate keyword identification, balancing quality and cost-effectiveness.
+- **Keyword Extraction**: Uses OpenAI o3-mini for efficient and accurate keyword identification, balancing quality and cost-effectiveness.
 
-- **Content Structuring**: Uses Anthropic Claude 3 Sonnet with thinking to analyze document structure and organize content into a coherent presentation format, with clear sections and priority points.
+- **Content Structuring**: Uses Anthropic Claude 3.7 Sonnet with thinking to analyze document structure and organize content into a coherent presentation format, with clear sections and priority points.
 
 The LLM integration is managed through LangChain, providing:
 - Structured output parsing with Pydantic models
 - Context management for accurate processing
 - Model fallbacks for reliability
 - Special system prompts that enhance Claude's reasoning capabilities
+
+## 📄 Large Document Processing
+
+SlideForge implements intelligent strategies to handle large documents:
+
+- **PDF Processing**: For large PDFs (30+ pages), the system extracts the table of contents, introduction, conclusion, and strategically distributed content samples to create a comprehensive representation of the document.
+
+- **DOCX Processing**: For large Word documents (500+ paragraphs), the system analyzes the document structure, extracts headings, and samples content from key sections to maintain context while keeping processing manageable.
+
+- **TXT Processing**: For large text files (1MB+), the system extracts the beginning, end, and strategically distributed chunks from throughout the file.
+
+This approach enables the system to:
+1. Process arbitrarily large documents without running into token limits
+2. Capture the most important information from each document
+3. Maintain context and coherence despite not processing every word
+4. Optimize LLM usage by focusing on the most relevant content
 
 ## 🔭 Future Development
 
