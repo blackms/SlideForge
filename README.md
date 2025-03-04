@@ -50,10 +50,11 @@ SlideForge uses a modular, multi-agent architecture:
 ### Three-Agent System
 
 1. **🔍 Extraction & Synthesis Agent**
-   - Processes uploaded documents
-   - Extracts text and structure
-   - Analyzes content using LLMs
-   - Identifies key points and themes
+   - Processes uploaded documents using PyPDF for PDF and python-docx for DOCX files
+   - Extracts text, structure, and metadata
+   - Analyzes content using OpenAI and Anthropic LLMs via LangChain
+   - Generates summaries, extracts keywords, and structures content
+   - Creates a presentation-ready data structure
 
 2. **📝 Slide Generation Agent**
    - Creates slide structure
@@ -72,8 +73,8 @@ SlideForge uses a modular, multi-agent architecture:
 - **Backend**: FastAPI
 - **Database**: SQLAlchemy with SQLite/PostgreSQL
 - **Authentication**: JWT
-- **AI/ML**: LangChain, OpenAI/Anthropic
-- **Document Processing**: python-docx, PyPDF2
+- **AI/ML**: LangChain with OpenAI GPT and Anthropic Claude
+- **Document Processing**: PyPDF, python-docx
 - **Presentation Generation**: python-pptx
 - **Task Processing**: Async processing
 - **Storage**: Local filesystem (expandable to S3)
@@ -81,7 +82,8 @@ SlideForge uses a modular, multi-agent architecture:
 ## 📋 Prerequisites
 
 - Python 3.10+
-- OpenAI API key (for production use)
+- OpenAI API key
+- Anthropic API key
 - PostgreSQL (optional, for production)
 
 ## 🚀 Installation
@@ -106,10 +108,11 @@ Create a `.env` file in the project root:
 ```
 DEBUG=true
 SECRET_KEY=your_secret_key
+# LLM API Keys
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
 # Uncomment for PostgreSQL
 # DATABASE_URI=postgresql://postgres:postgres@localhost/slideforge
-# Add your OpenAI API key
-# OPENAI_API_KEY=your_openai_api_key
 ```
 
 4. **Initialize the database and create a superuser**
@@ -206,6 +209,19 @@ curl -X GET "http://localhost:8000/api/presentations/1/download" \
 - `GET /api/presentations/{id}/thumbnail` - Get presentation thumbnail
 - `DELETE /api/presentations/{id}` - Delete a presentation
 
+## 🧠 LLM Integration
+
+SlideForge uses advanced LLMs from OpenAI and Anthropic to process documents:
+
+- **Text Summarization**: Uses Anthropic Claude for comprehensive document summarization
+- **Keyword Extraction**: Uses OpenAI GPT for efficient keyword identification
+- **Content Structuring**: Uses Anthropic Claude to organize content into a presentation structure
+
+The LLM integration is managed through LangChain, providing:
+- Structured output parsing
+- Context management
+- Model fallbacks
+
 ## 🔭 Future Development
 
 - 🖥️ Web-based user interface
@@ -231,3 +247,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [FastAPI](https://fastapi.tiangolo.com/) for the web framework
 - [python-pptx](https://python-pptx.readthedocs.io/) for presentation generation
 - [SQLAlchemy](https://www.sqlalchemy.org/) for database ORM
+- [OpenAI](https://openai.com/) and [Anthropic](https://www.anthropic.com/) for LLM APIs
