@@ -52,7 +52,7 @@ SlideForge uses a modular, multi-agent architecture:
 1. **🔍 Extraction & Synthesis Agent**
    - Processes uploaded documents using PyPDF for PDF and python-docx for DOCX files
    - Extracts text, structure, and metadata
-   - Analyzes content using OpenAI and Anthropic LLMs via LangChain
+   - Analyzes content using OpenAI GPT-4o-mini and Anthropic Claude 3 Sonnet via LangChain
    - Generates summaries, extracts keywords, and structures content
    - Creates a presentation-ready data structure
 
@@ -73,7 +73,7 @@ SlideForge uses a modular, multi-agent architecture:
 - **Backend**: FastAPI
 - **Database**: SQLAlchemy with SQLite/PostgreSQL
 - **Authentication**: JWT
-- **AI/ML**: LangChain with OpenAI GPT and Anthropic Claude
+- **AI/ML**: LangChain with OpenAI GPT-4o-mini and Anthropic Claude 3 Sonnet
 - **Document Processing**: PyPDF, python-docx
 - **Presentation Generation**: python-pptx
 - **Task Processing**: Async processing
@@ -211,16 +211,19 @@ curl -X GET "http://localhost:8000/api/presentations/1/download" \
 
 ## 🧠 LLM Integration
 
-SlideForge uses advanced LLMs from OpenAI and Anthropic to process documents:
+SlideForge uses state-of-the-art LLMs from OpenAI and Anthropic to process documents:
 
-- **Text Summarization**: Uses Anthropic Claude for comprehensive document summarization
-- **Keyword Extraction**: Uses OpenAI GPT for efficient keyword identification
-- **Content Structuring**: Uses Anthropic Claude to organize content into a presentation structure
+- **Text Summarization**: Uses Anthropic Claude 3 Sonnet with step-by-step thinking for comprehensive document summarization. The system prompt instructs Claude to think through its reasoning process in detail before providing a summary.
+
+- **Keyword Extraction**: Uses OpenAI GPT-4o-mini for efficient and accurate keyword identification, balancing quality and cost-effectiveness.
+
+- **Content Structuring**: Uses Anthropic Claude 3 Sonnet with thinking to analyze document structure and organize content into a coherent presentation format, with clear sections and priority points.
 
 The LLM integration is managed through LangChain, providing:
-- Structured output parsing
-- Context management
-- Model fallbacks
+- Structured output parsing with Pydantic models
+- Context management for accurate processing
+- Model fallbacks for reliability
+- Special system prompts that enhance Claude's reasoning capabilities
 
 ## 🔭 Future Development
 
