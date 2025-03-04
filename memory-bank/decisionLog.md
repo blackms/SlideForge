@@ -97,3 +97,26 @@ This document records key architectural decisions made during the development of
   - More complex deployment architecture
   - Better scalability and reliability for processing tasks
 - **Related Decisions**: AD-001 (Multi-Agent Architecture)
+
+### [AD-005] - Large Document Processing Strategy
+- **Date**: 2025-03-04
+- **Status**: Accepted
+- **Context**: The system needs to handle documents of arbitrary size, including very large documents (100+ pages) that exceed token limits of LLMs.
+- **Decision**: Implement intelligent document chunking with context-aware extraction that prioritizes key sections and representative samples.
+- **Alternatives Considered**: 
+  - Simple truncation to fit token limits
+  - Naive chunking with fixed-size segments
+  - Using a summarization step before main processing
+  - Limiting maximum document size
+- **Rationale**: 
+  - Strategic extraction preserves document meaning better than simple truncation
+  - Document structure analysis helps identify the most important sections
+  - Different document types (PDF, DOCX, TXT) require specialized extraction approaches
+  - Maintaining introduction and conclusion provides better context for LLMs
+- **Consequences**:
+  - More complex document parsing logic
+  - Better handling of large documents without arbitrary size limits
+  - Slight processing overhead for document structure analysis
+  - Superior presentation quality for large documents
+  - Reduced token usage and processing costs
+- **Related Decisions**: AD-001 (Multi-Agent Architecture)
