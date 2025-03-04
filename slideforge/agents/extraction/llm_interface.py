@@ -68,22 +68,22 @@ class LLMInterface:
         
         try:
             if self.openai_api_key:
-                # Use GPT-4o-mini as specified
+                # Use o3-mini model for faster response times
                 self.openai_model = ChatOpenAI(
-                    model="gpt-4o-mini",
+                    model="o3-mini",
                     temperature=0.2,
                     api_key=self.openai_api_key,
                     max_tokens=4000
                 )
-                logger.info("OpenAI GPT-4o-mini model initialized successfully")
+                logger.info("OpenAI o3-mini model initialized successfully")
         except Exception as e:
             logger.warning(f"Failed to initialize OpenAI model: {str(e)}")
         
         try:
             if self.anthropic_api_key:
-                # Configure Claude 3 Sonnet with thinking
+                # Configure Claude 3.7 Sonnet with thinking
                 self.anthropic_model = ChatAnthropic(
-                    model="claude-3-sonnet-20240229",
+                    model="claude-3.7-sonnet",
                     temperature=0.2,
                     api_key=self.anthropic_api_key,
                     max_tokens=4000,
@@ -96,7 +96,7 @@ class LLMInterface:
                         "Finally, present your results in the requested format."
                     )
                 )
-                logger.info("Anthropic Claude 3 Sonnet model with thinking initialized successfully")
+                logger.info("Anthropic Claude 3.7 Sonnet model with thinking initialized successfully")
         except Exception as e:
             logger.warning(f"Failed to initialize Anthropic model: {str(e)}")
             
