@@ -3,13 +3,16 @@ Extraction Agent for processing documents and extracting content.
 """
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from sqlalchemy.orm import Session
 
 from slideforge.db.models.document import Document
 from slideforge.db.models.extracted_content import ExtractedContent
 from slideforge.db.models.job import Job
+from slideforge.core.exceptions import ProcessingError
+from slideforge.agents.extraction.document_parser import DocumentParser
+from slideforge.agents.extraction.llm_interface import LLMInterface
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -18,7 +21,13 @@ logger = logging.getLogger(__name__)
 class ExtractionAgent:
     """
     Agent responsible for extracting and synthesizing content from documents.
+    Uses document parsing and LLM analysis to extract structured content.
     """
+    
+    def __init__(self):
+        """Initialize the extraction agent with document parser and LLM interface."""
+        self.document_parser = DocumentParser()
+        self.llm_interface = LLMInterface()
     
     async def process(self, job: Job) -> ExtractedContent:
         """
@@ -40,23 +49,44 @@ class ExtractionAgent:
         # Get the document
         document = db.query(Document).filter(Document.id == job.document_id).first()
         if not document:
-            raise Exception(f"Document {job.document_id} not found")
+            raise ProcessingError(f"Document {job.document_id} not found")
         
         # Check if file exists
         if not os.path.exists(document.file_path):
-            raise Exception(f"Document file not found at {document.file_path}")
+            raise ProcessingError(f"Document file not found at {document.file_path}")
         
         # Extract content based on document type
         try:
-            content_text = self._extract_text(document.file_path, document.file_type)
-            summary = self._generate_summary(content_text)
-            keywords = self._extract_keywords(content_text)
-            structured_content = self._structure_content(content_text)
+            # Step 1: Parse the document
+            parsed_document = self.document_parser.parse(document.file_path, document.file_type)
             
-            # Create extracted content record
+            # Log document statistics
+            logger.info(f"Document parsed successfully. Text length: {len(parsed_document['text'])} characters")
+            
+            # Step 2: Extract metadata from the parsed document
+            metadata = parsed_document.get('metadata', {})
+            # Add document properties to metadata
+            metadata['file_type'] = document.file_type
+            metadata['file_size'] = document.file_size
+            
+            # Step 3: Generate summary using LLM
+            summary = self.llm_interface.generate_summary(parsed_document['text'], metadata)
+            logger.info(f"Summary generated: {len(summary)} characters")
+            
+            # Step 4: Extract keywords using LLM
+            keywords = self.llm_interface.extract_keywords(parsed_document['text'], metadata)
+            logger.info(f"Keywords extracted: {keywords}")
+            
+            # Step 5: Structure content using LLM
+            structured_content = self.llm_interface.structure_content(
+                parsed_document['text'], summary, keywords, metadata
+            )
+            logger.info(f"Content structured with {len(structured_content.get('sections', []))} sections")
+            
+            # Step 6: Create extracted content record
             extracted_content = ExtractedContent(
                 document_id=document.id,
-                content_text=content_text,
+                content_text=parsed_document['text'],
                 content_json=structured_content,
                 summary=summary,
                 keywords=keywords,
@@ -74,7 +104,8 @@ class ExtractionAgent:
     
     def _extract_text(self, file_path: str, file_type: str) -> str:
         """
-        Extract text from a document file.
+        Legacy method: Extract text from a document file.
+        Now delegated to DocumentParser.
         
         Args:
             file_path: Path to the document file
@@ -83,37 +114,14 @@ class ExtractionAgent:
         Returns:
             str: Extracted text
         """
-        # TODO: Implement real extraction logic based on file type
-        # This is a placeholder implementation
-        
-        logger.info(f"Extracting text from {file_path} of type {file_type}")
-        
-        # For now, just read the file and return its content
-        # In a real implementation, this would use appropriate libraries
-        # based on the file type (PyPDF2, python-docx, etc.)
-        try:
-            with open(file_path, "rb") as f:
-                content = f.read()
-                
-            # Simple conversion to string - in reality, proper parsing would be needed
-            if file_type == "pdf":
-                # Placeholder for PDF extraction
-                return f"[Placeholder] Extracted content from PDF: {os.path.basename(file_path)}"
-            elif file_type == "docx":
-                # Placeholder for DOCX extraction
-                return f"[Placeholder] Extracted content from DOCX: {os.path.basename(file_path)}"
-            elif file_type == "txt":
-                # For text files, just decode
-                return content.decode("utf-8")
-            else:
-                return f"[Placeholder] Extracted content from {file_type}: {os.path.basename(file_path)}"
-        except Exception as e:
-            logger.error(f"Error reading file {file_path}: {str(e)}")
-            raise
+        # Use the document parser for extraction
+        parsed_document = self.document_parser.parse(file_path, file_type)
+        return parsed_document['text']
     
     def _generate_summary(self, content: str) -> str:
         """
-        Generate a summary of the content.
+        Legacy method: Generate a summary of the content.
+        Now delegated to LLMInterface.
         
         Args:
             content: The extracted text content
@@ -121,17 +129,13 @@ class ExtractionAgent:
         Returns:
             str: Summary of the content
         """
-        # TODO: Implement real summarization using LLM
-        # This is a placeholder implementation
-        
-        # Create a simple summary by taking the first 200 characters
-        if len(content) > 200:
-            return content[:200] + "..."
-        return content
+        # Use the LLM interface for summarization
+        return self.llm_interface.generate_summary(content)
     
     def _extract_keywords(self, content: str) -> str:
         """
-        Extract keywords from the content.
+        Legacy method: Extract keywords from the content.
+        Now delegated to LLMInterface.
         
         Args:
             content: The extracted text content
@@ -139,15 +143,13 @@ class ExtractionAgent:
         Returns:
             str: Comma-separated keywords
         """
-        # TODO: Implement real keyword extraction using LLM or NLP
-        # This is a placeholder implementation
-        
-        # Return some placeholder keywords
-        return "keyword1, keyword2, keyword3"
+        # Use the LLM interface for keyword extraction
+        return self.llm_interface.extract_keywords(content)
     
-    def _structure_content(self, content: str) -> dict:
+    def _structure_content(self, content: str) -> Dict[str, Any]:
         """
-        Structure the content into sections and points.
+        Legacy method: Structure the content into sections and points.
+        Now delegated to LLMInterface.
         
         Args:
             content: The extracted text content
@@ -155,27 +157,7 @@ class ExtractionAgent:
         Returns:
             dict: Structured content as JSON
         """
-        # TODO: Implement real content structuring using LLM
-        # This is a placeholder implementation
-        
-        # Create a simple structure
-        return {
-            "title": "Extracted Document",
-            "sections": [
-                {
-                    "heading": "Introduction",
-                    "content": "This is a placeholder introduction.",
-                    "points": ["Point 1", "Point 2", "Point 3"]
-                },
-                {
-                    "heading": "Main Content",
-                    "content": "This is placeholder main content.",
-                    "points": ["Point A", "Point B", "Point C"]
-                },
-                {
-                    "heading": "Conclusion",
-                    "content": "This is a placeholder conclusion.",
-                    "points": ["Summary Point 1", "Summary Point 2"]
-                }
-            ]
-        }
+        # Use the LLM interface for content structuring
+        summary = self.llm_interface.generate_summary(content)
+        keywords = self.llm_interface.extract_keywords(content)
+        return self.llm_interface.structure_content(content, summary, keywords)
