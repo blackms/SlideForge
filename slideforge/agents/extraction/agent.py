@@ -1,5 +1,6 @@
 """
 Extraction Agent for processing documents and extracting content.
+Optimized for handling large documents (100+ pages).
 """
 import logging
 import os
@@ -22,6 +23,7 @@ class ExtractionAgent:
     """
     Agent responsible for extracting and synthesizing content from documents.
     Uses document parsing and LLM analysis to extract structured content.
+    Optimized for both small and large documents.
     """
     
     def __init__(self):
@@ -61,32 +63,53 @@ class ExtractionAgent:
             parsed_document = self.document_parser.parse(document.file_path, document.file_type)
             
             # Log document statistics
-            logger.info(f"Document parsed successfully. Text length: {len(parsed_document['text'])} characters")
+            text_length = len(parsed_document['text'])
+            logger.info(f"Document parsed successfully. Text length: {text_length} characters")
+            
+            # Check if this is a large document
+            is_large_document = parsed_document.get('is_large_document', False)
+            if is_large_document:
+                logger.info(f"Processing large document with optimized extraction")
+                
+                # Log what sections were extracted
+                extracted_sections = parsed_document.get('extracted_sections', {})
+                logger.info(f"Extracted sections: {extracted_sections}")
             
             # Step 2: Extract metadata from the parsed document
             metadata = parsed_document.get('metadata', {})
             # Add document properties to metadata
             metadata['file_type'] = document.file_type
             metadata['file_size'] = document.file_size
+            if is_large_document:
+                metadata['is_large_document'] = True
+                # Add information about document size
+                if 'pages' in parsed_document:
+                    metadata['total_pages'] = parsed_document['pages']
+                elif 'paragraphs' in parsed_document:
+                    metadata['total_paragraphs'] = parsed_document['paragraphs']
+                elif 'lines' in parsed_document:
+                    metadata['total_lines'] = parsed_document['lines']
             
             # Step 3: Generate summary using LLM
-            summary = self.llm_interface.generate_summary(parsed_document['text'], metadata)
+            # For large documents, we use a special prompt that acknowledges the document's size
+            # and works with the extracted representative portions
+            summary = self._generate_summary_for_document(parsed_document['text'], metadata, is_large_document)
             logger.info(f"Summary generated: {len(summary)} characters")
             
             # Step 4: Extract keywords using LLM
-            keywords = self.llm_interface.extract_keywords(parsed_document['text'], metadata)
+            keywords = self._extract_keywords_for_document(parsed_document['text'], metadata, is_large_document)
             logger.info(f"Keywords extracted: {keywords}")
             
             # Step 5: Structure content using LLM
-            structured_content = self.llm_interface.structure_content(
-                parsed_document['text'], summary, keywords, metadata
+            structured_content = self._structure_content_for_document(
+                parsed_document['text'], summary, keywords, metadata, is_large_document
             )
             logger.info(f"Content structured with {len(structured_content.get('sections', []))} sections")
             
             # Step 6: Create extracted content record
             extracted_content = ExtractedContent(
                 document_id=document.id,
-                content_text=parsed_document['text'],
+                content_text=parsed_document['text'][:100000],  # Limit stored text to reasonable size
                 content_json=structured_content,
                 summary=summary,
                 keywords=keywords,
@@ -102,62 +125,85 @@ class ExtractionAgent:
             logger.error(f"Error extracting content: {str(e)}")
             raise
     
-    def _extract_text(self, file_path: str, file_type: str) -> str:
+    def _generate_summary_for_document(self, text: str, metadata: Dict[str, Any], is_large_document: bool) -> str:
         """
-        Legacy method: Extract text from a document file.
-        Now delegated to DocumentParser.
+        Generate a summary of the document content, with special handling for large documents.
         
         Args:
-            file_path: Path to the document file
-            file_type: Type of the document (pdf, docx, txt)
-        
+            text: The document text
+            metadata: Document metadata
+            is_large_document: Whether this is a large document
+            
         Returns:
-            str: Extracted text
+            str: The generated summary
         """
-        # Use the document parser for extraction
-        parsed_document = self.document_parser.parse(file_path, file_type)
-        return parsed_document['text']
+        if is_large_document:
+            # For large documents, add a note in the metadata to inform the LLM
+            enhanced_metadata = metadata.copy()
+            enhanced_metadata['document_note'] = (
+                "This is a large document that has been processed by extracting key sections including "
+                "table of contents, introduction, conclusion, and representative samples from throughout "
+                "the document. The text provided is not the complete document, but a strategic selection "
+                "designed to represent the overall content."
+            )
+            
+            # The text we received already contains the most important parts
+            return self.llm_interface.generate_summary(text, enhanced_metadata)
+        else:
+            # For regular documents, use standard summarization
+            return self.llm_interface.generate_summary(text, metadata)
     
-    def _generate_summary(self, content: str) -> str:
+    def _extract_keywords_for_document(self, text: str, metadata: Dict[str, Any], is_large_document: bool) -> str:
         """
-        Legacy method: Generate a summary of the content.
-        Now delegated to LLMInterface.
+        Extract keywords from the document content, with special handling for large documents.
         
         Args:
-            content: The extracted text content
-        
-        Returns:
-            str: Summary of the content
-        """
-        # Use the LLM interface for summarization
-        return self.llm_interface.generate_summary(content)
-    
-    def _extract_keywords(self, content: str) -> str:
-        """
-        Legacy method: Extract keywords from the content.
-        Now delegated to LLMInterface.
-        
-        Args:
-            content: The extracted text content
-        
+            text: The document text
+            metadata: Document metadata
+            is_large_document: Whether this is a large document
+            
         Returns:
             str: Comma-separated keywords
         """
-        # Use the LLM interface for keyword extraction
-        return self.llm_interface.extract_keywords(content)
+        if is_large_document:
+            # For large documents, add a note in the metadata
+            enhanced_metadata = metadata.copy()
+            enhanced_metadata['document_note'] = (
+                "This is a large document that has been processed by extracting key sections. "
+                "Please focus on identifying the most significant keywords from the provided excerpts."
+            )
+            
+            return self.llm_interface.extract_keywords(text, enhanced_metadata)
+        else:
+            # For regular documents, use standard keyword extraction
+            return self.llm_interface.extract_keywords(text, metadata)
     
-    def _structure_content(self, content: str) -> Dict[str, Any]:
+    def _structure_content_for_document(
+        self, text: str, summary: str, keywords: str, metadata: Dict[str, Any], is_large_document: bool
+    ) -> Dict[str, Any]:
         """
-        Legacy method: Structure the content into sections and points.
-        Now delegated to LLMInterface.
+        Structure the document content, with special handling for large documents.
         
         Args:
-            content: The extracted text content
-        
+            text: The document text
+            summary: The generated summary
+            keywords: The extracted keywords
+            metadata: Document metadata
+            is_large_document: Whether this is a large document
+            
         Returns:
             dict: Structured content as JSON
         """
-        # Use the LLM interface for content structuring
-        summary = self.llm_interface.generate_summary(content)
-        keywords = self.llm_interface.extract_keywords(content)
-        return self.llm_interface.structure_content(content, summary, keywords)
+        if is_large_document:
+            # For large documents, add a note in the metadata
+            enhanced_metadata = metadata.copy()
+            enhanced_metadata['document_note'] = (
+                "This is a large document that has been processed by extracting key sections. "
+                "When structuring the content, focus on creating a coherent presentation structure "
+                "based on the provided excerpts, summary, and keywords."
+            )
+            
+            return self.llm_interface.structure_content(text, summary, keywords, enhanced_metadata)
+        else:
+            # For regular documents, use standard content structuring
+            return self.llm_interface.structure_content(text, summary, keywords, metadata)
